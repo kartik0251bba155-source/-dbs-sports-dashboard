@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DBS Global University — Sports Score Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0c10;
+      --surface: #111318;
+      --card: #181c24;
+      --border: #252a35;
+      --accent: #f5a623;
+      --accent2: #e84545;
+      --accent3: #3dd68c;
+      --text: #eef0f4;
+      --muted: #7a8099;
+      --bba: #f5a623;
+      --mba: #3dd68c;
+      --btech: #7c6af5;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    header {
+      padding: 2rem 2.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .logo-badge {
+      width: 52px; height: 52px;
+      background: var(--accent);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      color: #000;
+      flex-shrink: 0;
+      box-shadow: 0 0 30px rgba(245,166,35,0.3);
+    }
+
+    .header-text h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 2px;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .header-text p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    .main { padding: 2rem 2.5rem; max-width: 1200px; }
+
+    /* Summary cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.2rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.5s ease both;
+    }
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--line-color, var(--accent));
+    }
+
+    .stat-card .label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card .value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.6rem;
+      line-height: 1;
+      color: var(--line-color, var(--accent));
+    }
+
+    .stat-card .sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      animation: fadeUp 0.5s 0.3s ease both;
+    }
+
+    .filter-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      margin-right: 0.5rem;
+    }
+
+    .chip {
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
+    .chip.course-bba.active { background: var(--bba); border-color: var(--bba); }
+    .chip.course-mba.active { background: var(--mba); border-color: var(--mba); color: #000; }
+    .chip.course-btech.active { background: var(--btech); border-color: var(--btech); }
+
+    /* Table */
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      animation: fadeUp 0.5s 0.4s ease both;
+      margin-bottom: 2.5rem;
+    }
+
+    .table-header {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .table-header h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+    }
+
+    #record-count {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 0.25rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      background: var(--surface);
+      padding: 0.75rem 1.5rem;
+      text-align: left;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      animation: rowIn 0.3s ease both;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 0.9rem 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    .game-name {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .game-icon { font-size: 1.1rem; }
+
+    .course-badge {
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .badge-bba { background: rgba(245,166,35,0.15); color: var(--bba); }
+    .badge-mba { background: rgba(61,214,140,0.15); color: var(--mba); }
+    .badge-btech { background: rgba(124,106,245,0.15); color: var(--btech); }
+
+    .score-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .score-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      min-width: 24px;
+    }
+
+    .score-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--border);
+      flex: 1;
+      min-width: 60px;
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    /* Chart section */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.5s 0.5s ease both;
+    }
+
+    @media (max-width: 700px) {
+      .chart-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.5rem;
+    }
+
+    .chart-card h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+    }
+
+    .bar-chart { display: flex; flex-direction: column; gap: 0.8rem; }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .bar-label {
+      font-size: 0.78rem;
+      min-width: 80px;
+      color: var(--muted);
+      text-transform: capitalize;
+    }
+
+    .bar-outer {
+      flex: 1;
+      height: 28px;
+      background: var(--surface);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-inner {
+      height: 100%;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #000;
+      transition: width 1s cubic-bezier(0.34,1.2,0.64,1);
+      min-width: 40px;
+    }
+
+    /* Animations */
+    @keyframes fadeDown { from { opacity:0; transform: translateY(-15px); } to { opacity:1; transform:none; } }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(15px); } to { opacity:1; transform:none; } }
+    @keyframes rowIn { from { opacity:0; } to { opacity:1; } }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      border-top: 1px solid var(--border);
+      letter-spacing: 0.5px;
+    }
+
+    .empty-state {
+      padding: 3rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">DBS</div>
+  <div class="header-text">
+    <h1>DBS Global University</h1>
+    <p>Sports Score Dashboard &mdash; Academic Year 2024–25</p>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="stat-card" style="--line-color: var(--accent)">
+      <div class="label">Total Records</div>
+      <div class="value" id="total-records">18</div>
+      <div class="sub">Across all courses</div>
+    </div>
+    <div class="stat-card" style="--line-color: var(--accent3)">
+      <div class="label">Highest Score</div>
+      <div class="value" id="highest-score">9</div>
+      <div class="sub" id="highest-info">TT · MBA / TT · BBA</div>
+    </div>
+    <div class="stat-card" style="--line-color: var(--btech)">
+      <div class="label">Average Score</div>
+      <div class="value" id="avg-score">7.2</div>
+      <div class="sub">Across all games & courses</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <span class="filter-label">Course:</span>
+    <button class="chip active" data-filter="all" onclick="filterData('all')">All</button>
+    <button class="chip course-bba" data-filter="bba" onclick="filterData('bba')">BBA</button>
+    <button class="chip course-mba" data-filter="mba" onclick="filterData('mba')">MBA</button>
+    <button class="chip course-btech" data-filter="btech" onclick="filterData('btech')">B.Tech</button>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <h2>Score Records</h2>
+      <span id="record-count">18 records</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Game</th>
+          <th>Course</th>
+          <th>Score / 10</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+    <div class="empty-state" id="empty-state" style="display:none">No records match the current filter.</div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>Avg Score by Game</h3>
+      <div class="bar-chart" id="game-chart"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Avg Score by Course</h3>
+      <div class="bar-chart" id="course-chart"></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>DBS Global University &mdash; Sports Performance Tracker &bull; Built with ❤️ by a Student Developer</footer>
+
+<script>
+  const data = [
+    {game:"Cricket",  course:"BBA",   score:7},
+    {game:"VV",       course:"BBA",   score:6},
+    {game:"Basketball",course:"BBA",  score:8},
+    {game:"Football", course:"BBA",   score:7},
+    {game:"Chess",    course:"BBA",   score:5},
+    {game:"TT",       course:"BBA",   score:9},
+    {game:"Cricket",  course:"MBA",   score:6},
+    {game:"VV",       course:"MBA",   score:9},
+    {game:"Basketball",course:"MBA",  score:8},
+    {game:"Football", course:"MBA",   score:7},
+    {game:"Chess",    course:"MBA",   score:5},
+    {game:"TT",       course:"MBA",   score:7},
+    {game:"Cricket",  course:"B.Tech",score:8},
+    {game:"VV",       course:"B.Tech",score:7},
+    {game:"Basketball",course:"B.Tech",score:9},
+    {game:"Football", course:"B.Tech",score:8},
+    {game:"Chess",    course:"B.Tech",score:6},
+    {game:"TT",       course:"B.Tech",score:7},
+  ];
+
+  const gameIcons = {
+    "Cricket":"🏏","VV":"🏐","Basketball":"🏀","Football":"⚽","Chess":"♟️","TT":"🏓"
+  };
+
+  const courseColors = {"BBA":"#f5a623","MBA":"#3dd68c","B.Tech":"#7c6af5"};
+  const badgeClass = {"BBA":"badge-bba","MBA":"badge-mba","B.Tech":"badge-btech"};
+
+  let currentFilter = 'all';
+
+  function getFiltered() {
+    if (currentFilter === 'all') return data;
+    const map = {'bba':'BBA','mba':'MBA','btech':'B.Tech'};
+    return data.filter(d => d.course === map[currentFilter]);
+  }
+
+  function renderTable() {
+    const filtered = getFiltered();
+    const tbody = document.getElementById('table-body');
+    const empty = document.getElementById('empty-state');
+    document.getElementById('record-count').textContent = filtered.length + ' records';
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = filtered.map((d, i) => `
+      <tr style="animation-delay:${i * 0.04}s">
+        <td><span class="game-name"><span class="game-icon">${gameIcons[d.game]||'🎮'}</span>${d.game}</span></td>
+        <td><span class="course-badge ${badgeClass[d.course]}">${d.course}</span></td>
+        <td>
+          <div class="score-bar-wrap">
+            <span class="score-num" style="color:${courseColors[d.course]}">${d.score}</span>
+            <div class="score-bar">
+              <div class="score-fill" style="width:${d.score*10}%; background:${courseColors[d.course]}"></div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function avg(arr) { return arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : 0; }
+
+  function renderSummary() {
+    const filtered = getFiltered();
+    document.getElementById('total-records').textContent = filtered.length;
+    const scores = filtered.map(d=>d.score);
+    const max = scores.length ? Math.max(...scores) : '-';
+    document.getElementById('highest-score').textContent = max;
+    const highItems = filtered.filter(d=>d.score===max);
+    document.getElementById('highest-info').textContent =
+      highItems.map(d=> d.game + ' · ' + d.course).join(' / ');
+    document.getElementById('avg-score').textContent = avg(scores);
+  }
+
+  function renderGameChart() {
+    const filtered = getFiltered();
+    const games = [...new Set(data.map(d=>d.game))];
+    const html = games.map(g => {
+      const items = filtered.filter(d=>d.game===g);
+      if (!items.length) return '';
+      const a = parseFloat(avg(items.map(d=>d.score)));
+      const pct = (a/10*100).toFixed(1);
+      return `
+        <div class="bar-row">
+          <span class="bar-label">${gameIcons[g]||''} ${g}</span>
+          <div class="bar-outer">
+            <div class="bar-inner" style="width:${pct}%; background: linear-gradient(90deg,#f5a623,#e84545)">
+              ${a}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+    document.getElementById('game-chart').innerHTML = html || '<div class="empty-state">No data</div>';
+  }
+
+  function renderCourseChart() {
+    const filtered = getFiltered();
+    const courses = [...new Set(data.map(d=>d.course))];
+    const html = courses.map(c => {
+      const items = filtered.filter(d=>d.course===c);
+      if (!items.length) return '';
+      const a = parseFloat(avg(items.map(d=>d.score)));
+      const pct = (a/10*100).toFixed(1);
+      const col = courseColors[c];
+      return `
+        <div class="bar-row">
+          <span class="bar-label">${c}</span>
+          <div class="bar-outer">
+            <div class="bar-inner" style="width:${pct}%; background:${col}">
+              ${a}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+    document.getElementById('course-chart').innerHTML = html || '<div class="empty-state">No data</div>';
+  }
+
+  function render() {
+    renderSummary();
+    renderTable();
+    renderGameChart();
+    renderCourseChart();
+  }
+
+  function filterData(val) {
+    currentFilter = val;
+    document.querySelectorAll('.chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.filter === val);
+    });
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
